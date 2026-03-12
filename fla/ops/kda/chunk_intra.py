@@ -8,7 +8,7 @@ from fla.ops.kda.chunk_intra_token_parallel import chunk_kda_fwd_intra_token_par
 from fla.ops.kda.wy_fast import recompute_w_u_fwd
 from fla.ops.utils import prepare_chunk_indices
 from fla.ops.utils.op import exp2, gather
-from fla.utils import IS_GATHER_SUPPORTED, IS_TF32_SUPPORTED, autotune_cache_kwargs
+from fla.utils import IS_AMD, IS_GATHER_SUPPORTED, IS_TF32_SUPPORTED, autotune_cache_kwargs
 
 if IS_TF32_SUPPORTED:
     SOLVE_TRIL_DOT_PRECISION = tl.constexpr('tf32')
@@ -350,8 +350,8 @@ def chunk_kda_fwd_kernel_inter_solve_fused(
 @triton.autotune(
     configs=[
         triton.Config({}, num_warps=num_warps, num_stages=num_stages)
-        for num_warps in [1, 2, 4, 8]
-        for num_stages in [2, 3, 4]
+        for num_warps in ([1, 2, 4] if IS_AMD else [1, 2, 4, 8])
+        for num_stages in ([1, 2] if IS_AMD else [2, 3, 4])
     ],
     key=['BK', 'NC', 'BT'],
     **autotune_cache_kwargs,
@@ -626,8 +626,8 @@ def chunk_kda_bwd_kernel_intra(
 @triton.autotune(
     configs=[
         triton.Config({}, num_warps=num_warps, num_stages=num_stages)
-        for num_warps in [1, 2, 4, 8]
-        for num_stages in [2, 3, 4]
+        for num_warps in ([1, 2, 4] if IS_AMD else [1, 2, 4, 8])
+        for num_stages in ([1, 2] if IS_AMD else [2, 3, 4])
     ],
     key=["BT", "BC"],
     **autotune_cache_kwargs,

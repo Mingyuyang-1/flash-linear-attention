@@ -6,7 +6,10 @@ import triton.language as tl
 
 from fla.ops.utils import prepare_chunk_indices
 from fla.ops.utils.op import exp2
-from fla.utils import autotune_cache_kwargs, check_shared_mem
+from fla.utils import IS_AMD, autotune_cache_kwargs, check_shared_mem
+
+NUM_WARPS_FWD = [2, 4] if IS_AMD else [2, 4, 8]
+NUM_STAGES_FWD = [1, 2] if IS_AMD else [2, 3, 4]
 
 
 @triton.heuristics({
@@ -17,8 +20,8 @@ from fla.utils import autotune_cache_kwargs, check_shared_mem
 @triton.autotune(
     configs=[
         triton.Config({}, num_warps=num_warps, num_stages=num_stages)
-        for num_warps in [2, 4, 8]
-        for num_stages in [2, 3, 4]
+        for num_warps in NUM_WARPS_FWD
+        for num_stages in NUM_STAGES_FWD
     ],
     key=['H', 'K', 'V', 'BT', 'BK', 'BV', 'IS_VARLEN'],
     **autotune_cache_kwargs,
